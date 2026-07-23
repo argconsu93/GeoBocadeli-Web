@@ -30,7 +30,7 @@
         }
         .login-card-container .login-logo {
             height: 52px; object-fit: contain; margin: 0 auto;
-            filter: brightness(0) saturate(100%) invert(18%) sepia(87%) saturate(2445%) hue-rotate(212deg) brightness(92%) contrast(97%);
+            filter: none;
         }
         .login-card-container h2 { font-size: 1.15rem; font-weight: 700; color: #0b1e42; }
         .login-card-container p { font-size: 0.8rem; color: #64748b; line-height: 1.3; }
@@ -106,7 +106,7 @@
 
         .filter-section { background: #f8fafc; padding: 8px 10px; border-radius: 8px; border: 1px solid #e2e8f0; }
         .filter-section label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 4px; display: block; }
-        select {
+        select, .search-input {
             width: 100%; padding: 6px; border-radius: 6px; border: 1px solid #cbd5e1;
             font-size: 0.8rem; font-weight: 600; color: #0f172a; outline: none; background: white;
         }
@@ -118,6 +118,11 @@
             text-align: center; color: #334155; transition: all 0.2s; user-select: none;
         }
         .btn-day.active { background: #1e3a8a; color: white; border-color: #1e3a8a; }
+
+        /* Novedad 1: Barra de Progreso Visual */
+        .progress-container { background: #e2e8f0; border-radius: 10px; height: 12px; width: 100%; overflow: hidden; position: relative; margin-top: 2px; }
+        .progress-bar { background: linear-gradient(90deg, #16a34a, #22c55e); height: 100%; width: 0%; transition: width 0.4s ease; border-radius: 10px; }
+        .progress-text { position: absolute; top: 0; left: 0; width: 100%; height: 100%; font-size: 0.58rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; justify-content: center; }
 
         .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
         .kpi-card {
@@ -141,6 +146,11 @@
         .btn-download-visited:hover { background-color: #15803d; }
         .btn-download-itinerary { background-color: #0284c7; color: white; }
         .btn-download-itinerary:hover { background-color: #0369a1; }
+        .btn-route-opt { background-color: #7c3aed; color: white; }
+        .btn-route-opt:hover { background-color: #6d28d9; }
+        .btn-route-opt:disabled { background-color: #cbd5e1; color: #94a3b8; cursor: not-allowed; }
+        .btn-compare { background-color: #0f172a; color: white; }
+        .btn-compare:hover { background-color: #1e293b; }
 
         .table-section { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; margin-top: 2px; }
         .table-title { font-size: 0.72rem; font-weight: 700; color: #1e293b; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; }
@@ -165,7 +175,20 @@
             100% { filter: drop-shadow(0 0 4px rgba(56,189,248,0.7)); opacity: 0.95; }
         }
 
-        /* Responsive */
+        /* Estilos del Modal Comparativo */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px);
+            display: none; justify-content: center; align-items: center; z-index: 99999;
+        }
+        .modal-content {
+            background: white; border-radius: 12px; width: 500px; max-width: 90%; max-height: 80vh;
+            display: flex; flex-direction: column; padding: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; }
+        .modal-header h3 { font-size: 1rem; color: #0b1e42; }
+        .btn-close-modal { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b; }
+
         @media (max-width: 768px) {
             .main-container { flex-direction: column; position: relative; }
             #map { height: 100%; width: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
@@ -293,6 +316,18 @@
             <div class="kpi-card success"><div class="val" id="kpi-porcentaje">0%</div><div class="lbl">% Avance</div></div>
         </div>
 
+        <!-- Novedad 1: Barra Visual de Progreso -->
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar-fill"></div>
+            <div class="progress-text" id="progress-text">AVANCE DE CUMPLIMIENTO: 0%</div>
+        </div>
+
+        <!-- Novedad 3: Buscador Rápido -->
+        <div class="filter-section" style="margin-top: 4px;">
+            <label><i class="fa-solid fa-magnifying-glass"></i> Buscar Cliente (Nombre / Código)</label>
+            <input type="text" id="input-search-cliente" class="search-input" placeholder="Escriba para filtrar lista...">
+        </div>
+
         <div class="table-section">
             <div class="table-title">
                 <span><i class="fa-solid fa-table-list"></i> Detalle de Clientes Registrados</span>
@@ -319,6 +354,14 @@
         </div>
 
         <div class="download-section">
+            <!-- Novedad 5: Trazado de Ruta Óptima -->
+            <button class="btn-download btn-route-opt" id="btn-trazar-ruta" disabled title="Seleccione Ruta y Día específico para habilitar">
+                <i class="fa-solid fa-route"></i> Trazar Ruta Óptima (Lejano ➔ Cercano)
+            </button>
+            <!-- Novedad 2: Comparativo -->
+            <button class="btn-download btn-compare" id="btn-abrir-comparativo">
+                <i class="fa-solid fa-chart-column"></i> Ver Comparativo de Cumplimiento
+            </button>
             <button class="btn-download btn-download-visited" id="btn-download-visited">
                 <i class="fa-solid fa-file-excel"></i> Descargar Clientes Visitados (.xlsx)
             </button>
@@ -329,6 +372,24 @@
     </aside>
 
     <div id="map"></div>
+</div>
+
+<!-- Modal Comparativo de Cumplimiento -->
+<div class="modal-overlay" id="modal-comparativo">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-chart-line"></i> Comparativo de Cumplimiento</h3>
+            <button class="btn-close-modal" id="btn-cerrar-comparativo">&times;</button>
+        </div>
+        <div style="overflow-y: auto; flex: 1;">
+            <table style="width: 100%;">
+                <thead>
+                    <tr><th>Grupo / Ruta</th><th>Total</th><th>Visitados</th><th>% Avance</th></tr>
+                </thead>
+                <tbody id="tabla-comparativo-body"></tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -378,6 +439,7 @@ let map = null;
 let markersGroup = null;
 let geocercasLayerGroup = null;
 let distribuidorasLayerGroup = null;
+let rutaOptimaLayerGroup = null; // Capa para dibujar el recorrido
 const clienteMarkersMap = {};
 const clientesVisitadosMap = new Map();
 let ultimoClientesFiltrados = [];
@@ -493,18 +555,34 @@ function procesarPropiedadesGeocercas() {
 }
 
 // ============================================================
-//  MAPA Y GEOCERCAS
+//  MAPA, CAPAS (GOOGLE MAPS/SATÉLITE) Y GEOCERCAS
 // ============================================================
 function inicializarMapa() {
     if (map) { map.remove(); map = null; }
-    map = L.map('map').setView([13.6929, -89.2182], 11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap'
-    }).addTo(map);
+    
+    // Novedad 4: Capas Base de Mapa (OpenStreetMap, Google Road, Google Satellite)
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
+    const googleRoad = L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'], attribution: '© Google Maps' });
+    const googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'], attribution: '© Google Satellite' });
+
+    map = L.map('map', {
+        center: [13.6929, -89.2182],
+        zoom: 11,
+        layers: [osmLayer]
+    });
+
+    const baseMaps = {
+        "OpenStreetMap": osmLayer,
+        "Google Maps": googleRoad,
+        "Google Satélite": googleSat
+    };
+
+    L.control.layers(baseMaps).addTo(map);
+
     distribuidorasLayerGroup = L.layerGroup().addTo(map);
     geocercasLayerGroup = L.layerGroup().addTo(map);
     markersGroup = L.layerGroup().addTo(map);
+    rutaOptimaLayerGroup = L.layerGroup().addTo(map);
 }
 
 function renderizarGeocercas(featuresGeocercasFiltradas, rutaSeleccionada) {
@@ -730,6 +808,8 @@ function actualizarOpcionesRuta() {
 }
 
 function aplicarFiltros() {
+    if (rutaOptimaLayerGroup) rutaOptimaLayerGroup.clearLayers();
+    
     const grupoSel = document.getElementById('select-grupo').value;
     const rutaSel = document.getElementById('select-ruta').value;
 
@@ -774,14 +854,35 @@ function aplicarFiltros() {
     document.getElementById('kpi-total').innerText = clientesFiltrados.length;
     actualizarKPIsVisitas();
 
-    // LÓGICA MEJORADA DE AUTO-CENTRADO
-    // Si hay clientes en pantalla, centra abarcando clientes. Si no, centra abarcando la Geocerca.
+    // Validar si el botón de Ruta Óptima debe habilitarse (Ruta específica + Día activo)
+    const btnRutaOpt = document.getElementById('btn-trazar-ruta');
+    if (rutaSel !== 'TODOS' && diaSeleccionado !== 'NINGUNO' && clientesFiltrados.length > 1) {
+        btnRutaOpt.disabled = false;
+        btnRutaOpt.title = "Trazar itinerario óptimo";
+    } else {
+        btnRutaOpt.disabled = true;
+        btnRutaOpt.title = "Requiere seleccionar una Ruta y un Día específico";
+    }
+
     let finalBounds = clientesBounds.isValid() ? clientesBounds : (geocercasBounds && geocercasBounds.isValid() ? geocercasBounds : null);
 
     if (finalBounds) {
         const maxZ = rutaSel !== 'TODOS' ? 15 : (grupoSel !== 'TODOS' ? 13 : 11);
         map.fitBounds(finalBounds, { padding: [40, 40], maxZoom: maxZ, animate: true });
     }
+}
+
+// Novedad 3: Filtrado en la tabla mediante el buscador de texto
+function filtrarTablaPorTexto() {
+    const text = document.getElementById('input-search-cliente').value.toLowerCase().trim();
+    if (!text) {
+        actualizarTablaClientes(ultimoClientesFiltrados);
+        return;
+    }
+    const filtrados = ultimoClientesFiltrados.filter(c => 
+        c.nombre.toLowerCase().includes(text) || c.codigo.toLowerCase().includes(text)
+    );
+    actualizarTablaClientes(filtrados);
 }
 
 function actualizarTablaClientes(clientes) {
@@ -832,6 +933,12 @@ function actualizarKPIsVisitas() {
     document.getElementById('kpi-visitados').innerText = visitados;
     document.getElementById('kpi-pendientes').innerText = pendientes;
     document.getElementById('kpi-porcentaje').innerText = porcentaje + '%';
+
+    // Novedad 1: Actualización de la Barra de Progreso
+    const pBar = document.getElementById('progress-bar-fill');
+    const pText = document.getElementById('progress-text');
+    pBar.style.width = porcentaje + '%';
+    pText.innerText = `AVANCE DE CUMPLIMIENTO: ${porcentaje}% (${visitados}/${total})`;
 }
 
 function seleccionarClienteEnMapa(codigo) {
@@ -850,7 +957,141 @@ function seleccionarClienteEnMapa(codigo) {
 }
 
 // ============================================================
-//  FUNCIONES DE ADMIN
+//  NOVEDAD 5: ALGORITMO DE RUTA ÓPTIMA (Inicia en Lejano, Termina en Cercano)
+// ============================================================
+function calcularDistancia(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Radio de la Tierra en km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function trazarRutaOptima() {
+    if (rutaOptimaLayerGroup) rutaOptimaLayerGroup.clearLayers();
+
+    const clientesValidos = ultimoClientesFiltrados.filter(c => c.lat && c.lng && !isNaN(c.lat) && !isNaN(c.lng));
+    if (clientesValidos.length < 2) {
+        alert("⚠️ Se necesitan al menos 2 clientes con coordenadas para trazar la ruta.");
+        return;
+    }
+
+    // 1. Calcular el Centroide (Punto Central Promedio)
+    let sumLat = 0, sumLng = 0;
+    clientesValidos.forEach(c => { sumLat += c.lat; sumLng += c.lng; });
+    const centroide = { lat: sumLat / clientesValidos.length, lng: sumLng / clientesValidos.length };
+
+    // 2. Encontrar el cliente MÁS LEJANO del centroide (Primer cliente del día)
+    let primerCliente = clientesValidos[0];
+    let maxDist = -1;
+    clientesValidos.forEach(c => {
+        const d = calcularDistancia(centroide.lat, centroide.lng, c.lat, c.lng);
+        if (d > maxDist) {
+            maxDist = d;
+            primerCliente = c;
+        }
+    });
+
+    // 3. Algoritmo del Vecino Más Cercano partiendo del más lejano
+    let noVisitados = [...clientesValidos];
+    let secuencia = [];
+    let actual = primerCliente;
+    
+    secuencia.push(actual);
+    noVisitados = noVisitados.filter(c => c.codigo !== actual.codigo);
+
+    while (noVisitados.length > 0) {
+        let masCercano = noVisitados[0];
+        let minDist = calcularDistancia(actual.lat, actual.lng, masCercano.lat, masCercano.lng);
+
+        for (let i = 1; i < noVisitados.length; i++) {
+            const d = calcularDistancia(actual.lat, actual.lng, noVisitados[i].lat, noVisitados[i].lng);
+            if (d < minDist) {
+                minDist = d;
+                masCercano = noVisitados[i];
+            }
+        }
+        secuencia.push(masCercano);
+        actual = masCercano;
+        noVisitados = noVisitados.filter(c => c.codigo !== actual.codigo);
+    }
+
+    // 4. Dibujar la Ruta en el Mapa
+    const latLngs = secuencia.map(c => [c.lat, c.lng]);
+    const polyline = L.polyline(latLngs, {
+        color: '#7c3aed',
+        weight: 4,
+        dashArray: '8, 8',
+        opacity: 0.8
+    }).addTo(rutaOptimaLayerGroup);
+
+    // Colocar marcadores con numeración de orden
+    secuencia.forEach((c, index) => {
+        const num = index + 1;
+        const isFirst = num === 1;
+        const isLast = num === secuencia.length;
+        const badgeColor = isFirst ? '#dc2626' : (isLast ? '#16a34a' : '#7c3aed');
+
+        const customIcon = L.divIcon({
+            className: 'custom-route-icon',
+            html: `<div style="background:${badgeColor}; color:white; border-radius:50%; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; border:2px solid white; box-shadow:0 2px 5px rgba(0,0,0,0.4);">${num}</div>`,
+            iconSize: [22, 22],
+            iconAnchor: [11, 11]
+        });
+
+        L.marker([c.lat, c.lng], { icon: customIcon })
+            .bindPopup(`<b>Parada #${num}</b><br>${c.nombre}<br><i>${isFirst ? 'INICIO (Cliente más distante)' : (isLast ? 'FIN (Cliente más cercano)' : '')}</i>`)
+            .addTo(rutaOptimaLayerGroup);
+    });
+
+    map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+    alert(`✅ Ruta óptima trazada para ${secuencia.length} clientes.\nInicia en el cliente más lejano y finaliza en el más cercano.`);
+}
+
+// ============================================================
+//  NOVEDAD 2: MODAL COMPARATIVO
+// ============================================================
+function abrirModalComparativo() {
+    const tbody = document.getElementById('tabla-comparativo-body');
+    tbody.innerHTML = '';
+    
+    const grupoSel = document.getElementById('select-grupo').value;
+    let clientesAnalizar = rawClientes;
+    if (grupoSel !== 'TODOS') clientesAnalizar = rawClientes.filter(c => c.grupo === grupoSel);
+
+    const rutasMap = {};
+    clientesAnalizar.forEach(c => {
+        if (!rutasMap[c.ruta]) rutasMap[c.ruta] = { total: 0, visitados: 0 };
+        rutasMap[c.ruta].total++;
+        if (clientesVisitadosMap.get(c.codigo) === true) rutasMap[c.ruta].visitados++;
+    });
+
+    Object.keys(rutasMap).sort().forEach(r => {
+        const data = rutasMap[r];
+        const pct = data.total > 0 ? Math.round((data.visitados / data.total) * 100) : 0;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="font-weight:700;">${r}</td>
+            <td>${data.total}</td>
+            <td style="color:#16a34a; font-weight:bold;">${data.visitados}</td>
+            <td>
+                <span style="background:${pct >= 80 ? '#dcfce7' : '#fef3c7'}; color:${pct >= 80 ? '#15803d' : '#b45309'}; padding:2px 6px; border-radius:4px; font-weight:bold;">${pct}%</span>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById('modal-comparativo').style.display = 'flex';
+}
+
+function cerrarModalComparativo() {
+    document.getElementById('modal-comparativo').style.display = 'none';
+}
+
+// ============================================================
+//  FUNCIONES DE ADMIN & DESCARGAS (Originales Mantenidas)
 // ============================================================
 function subirNuevoCSV(file) {
     if (!file) return;
@@ -930,9 +1171,6 @@ function subirNuevoGeoJSONDistribuidoras(file) {
     reader.readAsText(file);
 }
 
-// ============================================================
-//  DESCARGAS
-// ============================================================
 function descargarClientesVisitados() {
     const listVisitados = [];
     rawClientes.forEach(c => {
@@ -1022,7 +1260,6 @@ function validarLogin() {
         inicializarMapa();
         poblarFiltrosPermitidos();
         
-        // Forzamos la primera actualización del centrado
         setTimeout(() => {
             if (map) map.invalidateSize();
             aplicarFiltros();
@@ -1105,6 +1342,11 @@ document.addEventListener('DOMContentLoaded', function() {
             aplicarFiltros();
         });
     });
+
+    document.getElementById('input-search-cliente').addEventListener('input', filtrarTablaPorTexto);
+    document.getElementById('btn-trazar-ruta').addEventListener('click', trazarRutaOptima);
+    document.getElementById('btn-abrir-comparativo').addEventListener('click', abrirModalComparativo);
+    document.getElementById('btn-cerrar-comparativo').addEventListener('click', cerrarModalComparativo);
 
     document.getElementById('drawer-handle').addEventListener('click', toggleDrawer);
 
