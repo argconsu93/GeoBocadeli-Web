@@ -5,21 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ruta360 - Regional - Bocadeli</title>
     
-    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- XLSX -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- PapaParse -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        /* ====== TODOS LOS ESTILOS (igual que antes) ====== */
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
         html, body { height: 100vh; width: 100vw; margin: 0; padding: 0; overflow: hidden !important; background-color: #0b1e42; color: #1e293b; }
         body { display: flex; flex-direction: column; position: relative; }
@@ -37,7 +30,6 @@
         }
         .login-card-container .login-logo {
             height: 52px; object-fit: contain; margin: 0 auto;
-            filter: brightness(0) saturate(100%) invert(18%) sepia(87%) saturate(2445%) hue-rotate(212deg) brightness(92%) contrast(97%);
         }
         .login-card-container h2 { font-size: 1.15rem; font-weight: 700; color: #0b1e42; }
         .login-card-container p { font-size: 0.8rem; color: #64748b; line-height: 1.3; }
@@ -197,10 +189,8 @@
 </head>
 <body>
 
-<!-- ===== LOGIN MODAL ===== -->
 <div id="login-modal">
     <div class="login-card-container">
-        <!-- Logo: cambiar ruta si tienes otro logo -->
         <img src="assets/logo_bocadeli_blanco.png" class="login-logo" alt="Logo Bocadeli" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 320 80%22 fill=%22%231e3a8a%22><text x=%2210%22 y=%2255%22 font-family=%22Arial, sans-serif%22 font-size=%2246%22 font-weight=%22900%22 letter-spacing=%22-1%22>bocadeli</text><circle cx=%22290%22 cy=%2232%22 r=%228%22 fill=%22%23dc2626%22/></svg>'">
         <h2>Ruta360 - Regional</h2>
         <p>Seleccione su nombre e ingrese su contraseña para continuar:</p>
@@ -220,7 +210,6 @@
     </div>
 </div>
 
-<!-- ===== HEADER ===== -->
 <header>
     <div class="header-brand">
         <img src="assets/logo_bocadeli_blanco.png" class="header-logo" alt="Logo Bocadeli" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 320 80%22 fill=%22%23ffffff%22><text x=%2210%22 y=%2255%22 font-family=%22Arial, sans-serif%22 font-size=%2246%22 font-weight=%22900%22 letter-spacing=%22-1%22>bocadeli</text><circle cx=%22290%22 cy=%2232%22 r=%228%22 fill=%22%23dc2626%22/></svg>'">
@@ -243,7 +232,6 @@
     </div>
 </header>
 
-<!-- ===== MAIN ===== -->
 <div class="main-container">
     <aside class="sidebar" id="mobile-drawer">
         <div class="drawer-handle" id="drawer-handle">
@@ -256,7 +244,6 @@
             </div>
         </div>
 
-        <!-- Panel Admin -->
         <div class="admin-panel" id="panel-admin-actualizacion">
             <label><i class="fa-solid fa-cloud-arrow-up"></i> Carga Temporal / Pruebas (Admin)</label>
             <div>
@@ -273,7 +260,6 @@
             </div>
         </div>
 
-        <!-- Filtros -->
         <div class="filter-section">
             <label><i class="fa-solid fa-layer-group"></i> Grupo Operativo</label>
             <select id="select-grupo"></select>
@@ -297,7 +283,6 @@
             </div>
         </div>
 
-        <!-- KPIs -->
         <div class="kpi-grid">
             <div class="kpi-card"><div class="val" id="kpi-total">0</div><div class="lbl">Filtrados</div></div>
             <div class="kpi-card"><div class="val" id="kpi-coords">0</div><div class="lbl">C/ Coords</div></div>
@@ -307,7 +292,6 @@
             <div class="kpi-card success"><div class="val" id="kpi-porcentaje">0%</div><div class="lbl">% Avance</div></div>
         </div>
 
-        <!-- Tabla Clientes -->
         <div class="table-section">
             <div class="table-title">
                 <span><i class="fa-solid fa-table-list"></i> Detalle de Clientes Registrados</span>
@@ -321,7 +305,6 @@
             </div>
         </div>
 
-        <!-- Tabla Fuera -->
         <div class="table-section">
             <div class="table-title" style="color:#dc2626;">
                 <span><i class="fa-solid fa-triangle-exclamation"></i> Clientes Fuera de Geocerca</span>
@@ -334,7 +317,6 @@
             </div>
         </div>
 
-        <!-- Botones descarga -->
         <div class="download-section">
             <button class="btn-download btn-download-visited" id="btn-download-visited">
                 <i class="fa-solid fa-file-excel"></i> Descargar Clientes Visitados (.xlsx)
@@ -350,7 +332,7 @@
 
 <script>
 // ============================================================
-//  CONFIGURACIÓN (igual que en el código original)
+//  CONFIGURACIÓN Y USUARIOS
 // ============================================================
 const USUARIOS_ROLES = [
     { nombre: "JORGE LUIS PINEDA", rol: "Supervisor", grupo: "GRUPO_01", pass: "G01" },
@@ -399,7 +381,7 @@ let ultimoClientesFiltrados = [];
 let ultimoClientesFuera = [];
 
 // ============================================================
-//  FUNCIONES DE CARGA DE DATOS (desde archivos en data/)
+//  CARGA DE DATOS DESDE REPOSITORIO
 // ============================================================
 function cargarClientes(url = 'data/clientes.csv') {
     return new Promise((resolve, reject) => {
@@ -463,15 +445,15 @@ function cargarGeoJSON(url) {
 
 function cargarDatosIniciales() {
     const promClientes = cargarClientes('data/clientes.csv').catch(err => {
-        console.warn('No se pudo cargar clientes.csv, se usará array vacío', err);
+        console.warn('No se pudo cargar clientes.csv', err);
         return [];
     });
     const promGeocercas = cargarGeoJSON('data/geocercas_rutas.geojson').catch(err => {
-        console.warn('No se pudo cargar geocercas_rutas.geojson, se usará null', err);
+        console.warn('No se pudo cargar geocercas_rutas.geojson', err);
         return { type: "FeatureCollection", features: [] };
     });
     const promDistribuidoras = cargarGeoJSON('data/geocercas_distribuidoras.geojson').catch(err => {
-        console.warn('No se pudo cargar geocercas_distribuidoras.geojson, se usará null', err);
+        console.warn('No se pudo cargar geocercas_distribuidoras.geojson', err);
         return { type: "FeatureCollection", features: [] };
     });
 
@@ -508,7 +490,7 @@ function procesarPropiedadesGeocercas() {
 }
 
 // ============================================================
-//  FUNCIONES DE MAPA Y GEOCERCAS
+//  MAPA Y GEOCERCAS
 // ============================================================
 function inicializarMapa() {
     if (map) { map.remove(); map = null; }
@@ -524,8 +506,9 @@ function inicializarMapa() {
 
 function renderizarGeocercas(featuresGeocercasFiltradas, rutaSeleccionada) {
     geocercasLayerGroup.clearLayers();
-    if (!featuresGeocercasFiltradas || featuresGeocercasFiltradas.length === 0) return;
-    L.geoJSON(
+    if (!featuresGeocercasFiltradas || featuresGeocercasFiltradas.length === 0) return null;
+    
+    const geoJsonLayer = L.geoJSON(
         { type: "FeatureCollection", features: featuresGeocercasFiltradas },
         {
             style: function(feature) {
@@ -548,6 +531,8 @@ function renderizarGeocercas(featuresGeocercasFiltradas, rutaSeleccionada) {
             }
         }
     ).addTo(geocercasLayerGroup);
+
+    return geoJsonLayer.getBounds();
 }
 
 function renderizarDistribuidoras(distribuidorasData) {
@@ -687,7 +672,7 @@ function cambiarEstadoVisitado(codigo, visitado) {
 }
 
 // ============================================================
-//  FILTROS Y ACTUALIZACIÓN DE UI
+//  FILTROS Y CENTRADO DE MAPA
 // ============================================================
 function poblarFiltrosPermitidos() {
     const selectGrupo = document.getElementById('select-grupo');
@@ -773,14 +758,12 @@ function aplicarFiltros() {
             }
             return matchGrupo && matchRuta && matchDia;
         });
-    } else {
-        clientesFiltrados = [];
     }
 
     ultimoClientesFiltrados = clientesFiltrados;
     renderizarDistribuidoras(rawDistribuidoras);
-    renderizarGeocercas(featuresGeocercasFiltradas, rutaSel);
-    const { bounds, fuera } = renderizarMarcadores(clientesFiltrados, featuresGeocercasFiltradas);
+    const geocercasBounds = renderizarGeocercas(featuresGeocercasFiltradas, rutaSel);
+    const { bounds: clientesBounds, fuera } = renderizarMarcadores(clientesFiltrados, featuresGeocercasFiltradas);
     ultimoClientesFuera = fuera;
 
     actualizarTablaClientes(clientesFiltrados);
@@ -788,9 +771,13 @@ function aplicarFiltros() {
     document.getElementById('kpi-total').innerText = clientesFiltrados.length;
     actualizarKPIsVisitas();
 
-    if (bounds.isValid()) {
+    // LÓGICA MEJORADA DE AUTO-CENTRADO
+    // Si hay clientes en pantalla, centra abarcando clientes. Si no, centra abarcando la Geocerca.
+    let finalBounds = clientesBounds.isValid() ? clientesBounds : (geocercasBounds && geocercasBounds.isValid() ? geocercasBounds : null);
+
+    if (finalBounds) {
         const maxZ = rutaSel !== 'TODOS' ? 15 : (grupoSel !== 'TODOS' ? 13 : 11);
-        map.fitBounds(bounds, { padding: [40, 40], maxZoom: maxZ, animate: true });
+        map.fitBounds(finalBounds, { padding: [40, 40], maxZoom: maxZ, animate: true });
     }
 }
 
@@ -860,7 +847,7 @@ function seleccionarClienteEnMapa(codigo) {
 }
 
 // ============================================================
-//  FUNCIONES DE ADMIN (carga de archivos)
+//  FUNCIONES DE ADMIN
 // ============================================================
 function subirNuevoCSV(file) {
     if (!file) return;
@@ -941,7 +928,7 @@ function subirNuevoGeoJSONDistribuidoras(file) {
 }
 
 // ============================================================
-//  FUNCIONES DE DESCARGA
+//  DESCARGAS
 // ============================================================
 function descargarClientesVisitados() {
     const listVisitados = [];
@@ -1028,9 +1015,16 @@ function validarLogin() {
         } else {
             document.getElementById('panel-admin-actualizacion').style.display = 'none';
         }
+        
         inicializarMapa();
         poblarFiltrosPermitidos();
-        aplicarFiltros();
+        
+        // Forzamos la primera actualización del centrado
+        setTimeout(() => {
+            if (map) map.invalidateSize();
+            aplicarFiltros();
+        }, 200);
+
     } else {
         errorDiv.textContent = "⚠️ Contraseña incorrecta. Verifique e intente de nuevo.";
         errorDiv.style.display = 'block';
@@ -1066,7 +1060,7 @@ function toggleDrawer() {
 }
 
 // ============================================================
-//  EVENTOS Y ARRANQUE
+//  ARRANQUE
 // ============================================================
 document.addEventListener('DOMContentLoaded', function() {
     actualizarFechaActual();
@@ -1124,12 +1118,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (this.files[0]) subirNuevoGeoJSONDistribuidoras(this.files[0]);
     });
 
-    // Cargar datos iniciales (si fallan, se usan vacíos)
     cargarDatosIniciales().then(() => {
-        console.log('Datos cargados correctamente.');
-        // Una vez cargados, el usuario debe hacer login; el login ya está visible.
+        console.log('Datos de GitHub cargados.');
     }).catch(err => {
-        console.warn('Error al cargar datos iniciales, se usará datos vacíos', err);
+        console.warn('Error al cargar datos iniciales:', err);
     });
 });
 </script>
