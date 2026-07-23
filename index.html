@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ruta360 - Regional - Bocadeli</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- XLSX -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- PapaParse -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* ====== TODOS LOS ESTILOS (igual que antes) ====== */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        html, body { height: 100vh; width: 100vw; margin: 0; padding: 0; overflow: hidden !important; background-color: #0b1e42; color: #1e293b; }
+        body { display: flex; flex-direction: column; position: relative; }
+        
+        #login-modal {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            width: 100vw; height: 100vh; background-color: #0b1e42;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 999999; padding: 16px;
+        }
+        .login-card-container {
+            background: #ffffff; width: 380px; max-width: 92%; padding: 26px 22px 18px 22px;
+            border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            text-align: center; display: flex; flex-direction: column; gap: 12px; margin: auto;
+        }
+        .login-card-container .login-logo {
+            height: 52px; object-fit: contain; margin: 0 auto;
+            filter: brightness(0) saturate(100%) invert(18%) sepia(87%) saturate(2445%) hue-rotate(212deg) brightness(92%) contrast(97%);
+        }
+        .login-card-container h2 { font-size: 1.15rem; font-weight: 700; color: #0b1e42; }
+        .login-card-container p { font-size: 0.8rem; color: #64748b; line-height: 1.3; }
+        .login-input-group { text-align: left; display: flex; flex-direction: column; gap: 4px; }
+        .login-input-group label { font-size: 0.7rem; font-weight: 700; color: #475569; text-transform: uppercase; }
+        .login-select, .login-input {
+            width: 100%; padding: 9px; border-radius: 8px; border: 1px solid #cbd5e1;
+            font-size: 0.84rem; font-weight: 600; color: #0f172a; outline: none; background: #f8fafc;
+        }
+        .login-btn {
+            background: #1e3a8a; color: white; border: none; padding: 11px;
+            border-radius: 8px; font-size: 0.85rem; font-weight: 700; cursor: pointer;
+            transition: background 0.2s; box-shadow: 0 4px 6px rgba(30,58,138,0.2); margin-top: 4px;
+        }
+        .login-btn:hover { background: #0b1e42; }
+        #login-error { color: #dc2626; font-size: 0.75rem; font-weight: 600; display: none; margin-top: -2px; }
+        .powered-by-card-text {
+            margin-top: 8px; font-size: 0.68rem; font-weight: 600; color: #94a3b8;
+            letter-spacing: 0.02em; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 10px;
+            text-transform: lowercase;
+        }
+
+        header {
+            background: linear-gradient(135deg, #0b1e42 0%, #1e3a8a 100%);
+            color: white; padding: 6px 16px; display: flex;
+            justify-content: space-between; align-items: center;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.15); z-index: 1000;
+            height: 50px; flex-shrink: 0;
+        }
+        .header-brand { display: flex; align-items: center; gap: 12px; }
+        .header-logo { height: 34px; width: auto; max-width: 120px; object-fit: contain; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25)); }
+        .header-text-group { display: flex; flex-direction: column; }
+        .header-title-text { font-size: 1rem; font-weight: 700; color: #ffffff; letter-spacing: -0.01em; line-height: 1.1; }
+        .header-sub-text { font-size: 0.72rem; font-weight: 500; color: #ffffff; opacity: 0.95; margin-top: 1px; }
+        .header-user-info { display: flex; align-items: center; gap: 8px; }
+        .user-pill {
+            background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+            color: #ffffff; padding: 4px 9px; border-radius: 20px; font-size: 0.72rem;
+            font-weight: 600; display: flex; align-items: center; gap: 5px;
+        }
+        .btn-logout {
+            background: rgba(220,38,38,0.85); border: 1px solid rgba(255,255,255,0.3);
+            color: white; padding: 4px 8px; border-radius: 20px; font-size: 0.7rem;
+            font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;
+            transition: background 0.2s; border: none;
+        }
+        .btn-logout:hover { background: #dc2626; }
+        .badge-date {
+            background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+            color: #ffffff; padding: 4px 10px; border-radius: 20px; font-size: 0.72rem;
+            font-weight: 600; display: flex; align-items: center; gap: 5px; backdrop-filter: blur(4px);
+        }
+
+        .main-container { display: flex; flex: 1; position: relative; overflow: hidden; height: calc(100vh - 50px); }
+        .sidebar {
+            width: 370px; background: white; border-right: 1px solid #e2e8f0;
+            display: flex; flex-direction: column; gap: 10px; padding: 12px;
+            overflow-y: auto; z-index: 500; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+        }
+        .admin-panel {
+            background: #eff6ff; border: 1px dashed #3b82f6; padding: 8px;
+            border-radius: 8px; display: none; flex-direction: column; gap: 6px;
+        }
+        .admin-panel label { font-size: 0.68rem; font-weight: 700; color: #1e40af; text-transform: uppercase; }
+        .admin-file-input { font-size: 0.7rem; color: #1e293b; width: 100%; }
+        .drawer-handle {
+            display: none; background: #0f172a; color: white; padding: 10px 14px;
+            border-radius: 12px 12px 0 0; cursor: pointer;
+            font-size: 0.8rem; font-weight: 700; box-shadow: 0 -3px 10px rgba(0,0,0,0.2);
+            user-select: none;
+        }
+        .drawer-handle .pill { width: 34px; height: 4px; background: rgba(255,255,255,0.4); border-radius: 2px; margin: 0 auto 5px auto; }
+
+        .filter-section { background: #f8fafc; padding: 8px 10px; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .filter-section label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 4px; display: block; }
+        select {
+            width: 100%; padding: 6px; border-radius: 6px; border: 1px solid #cbd5e1;
+            font-size: 0.8rem; font-weight: 600; color: #0f172a; outline: none; background: white;
+        }
+        select:disabled { background-color: #e2e8f0; color: #64748b; cursor: not-allowed; }
+        .day-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+        .btn-day {
+            padding: 5px 2px; border: 1px solid #cbd5e1; background: white;
+            border-radius: 6px; font-size: 0.68rem; font-weight: 600; cursor: pointer;
+            text-align: center; color: #334155; transition: all 0.2s; user-select: none;
+        }
+        .btn-day.active { background: #1e3a8a; color: white; border-color: #1e3a8a; }
+
+        .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+        .kpi-card {
+            background: white; border: 1px solid #e2e8f0; padding: 5px 3px;
+            border-radius: 6px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        }
+        .kpi-card .val { font-size: 1rem; font-weight: 700; color: #1e3a8a; }
+        .kpi-card .lbl { font-size: 0.52rem; font-weight: 600; color: #64748b; text-transform: uppercase; margin-top: 1px; }
+        .kpi-card.alert .val { color: #dc2626; }
+        .kpi-card.success .val { color: #16a34a; }
+        .kpi-card.info .val { color: #0284c7; }
+
+        .download-section { display: flex; flex-direction: column; gap: 5px; margin-top: 2px; }
+        .btn-download {
+            width: 100%; padding: 8px 10px; border: none; border-radius: 6px;
+            font-size: 0.75rem; font-weight: 700; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            transition: all 0.2s ease; text-decoration: none;
+        }
+        .btn-download-visited { background-color: #16a34a; color: white; }
+        .btn-download-visited:hover { background-color: #15803d; }
+        .btn-download-itinerary { background-color: #0284c7; color: white; }
+        .btn-download-itinerary:hover { background-color: #0369a1; }
+
+        .table-section { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; margin-top: 2px; }
+        .table-title { font-size: 0.72rem; font-weight: 700; color: #1e293b; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; }
+        .table-wrapper { max-height: 130px; overflow-y: auto; overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 6px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.68rem; }
+        th { background-color: #f8fafc; color: #475569; font-weight: 700; text-align: left; padding: 4px 5px; position: sticky; top: 0; border-bottom: 2px solid #e2e8f0; z-index: 2; }
+        td { padding: 4px 5px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+        tr.clickable-row { cursor: pointer; transition: background 0.15s; }
+        tr.clickable-row:hover { background-color: #e0f2fe !important; }
+        tr.visited-row { background-color: #f0fdf4; }
+        tr.outside-row { background-color: #fef2f2; }
+
+        #map { flex: 1; height: 100%; background: #e2e8f0; }
+
+        path.glow-geofence {
+            filter: drop-shadow(0 0 2px rgba(2,132,199,0.4));
+            stroke: #38bdf8 !important; stroke-width: 3px !important;
+            animation: pulseGlow 2.5s infinite alternate;
+        }
+        @keyframes pulseGlow {
+            0% { filter: drop-shadow(0 0 2px rgba(56,189,248,0.4)); opacity: 0.75; }
+            100% { filter: drop-shadow(0 0 4px rgba(56,189,248,0.7)); opacity: 0.95; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-container { flex-direction: column; position: relative; }
+            #map { height: 100%; width: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
+            .sidebar {
+                position: fixed; bottom: 0; left: 0; right: 0; width: 100%; height: 70vh; max-height: 70vh;
+                z-index: 1000; border-radius: 14px 14px 0 0; box-shadow: 0 -6px 20px rgba(0,0,0,0.3);
+                padding: 0 14px 14px 14px; border-right: none; background: white; overflow-y: auto;
+                transition: transform 0.35s cubic-bezier(0.4,0,0.2,1); transform: translateY(0);
+            }
+            .sidebar.collapsed { transform: translateY(calc(100% - 48px)); overflow: hidden; }
+            .drawer-handle {
+                display: block; position: sticky; top: 0; background: #0f172a; color: white;
+                padding: 10px 14px; margin: 0 -14px 10px -14px; border-radius: 12px 12px 0 0;
+                cursor: pointer; z-index: 1010; user-select: none; min-height: 48px; box-sizing: border-box;
+            }
+            .day-buttons { grid-template-columns: repeat(7, 1fr); }
+            .header-title-text { font-size: 0.88rem; }
+            .header-sub-text { font-size: 0.68rem; }
+            .badge-date { font-size: 0.68rem; padding: 3px 8px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== LOGIN MODAL ===== -->
+<div id="login-modal">
+    <div class="login-card-container">
+        <!-- Logo: cambiar ruta si tienes otro logo -->
+        <img src="assets/logo_bocadeli_blanco.png" class="login-logo" alt="Logo Bocadeli" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 320 80%22 fill=%22%231e3a8a%22><text x=%2210%22 y=%2255%22 font-family=%22Arial, sans-serif%22 font-size=%2246%22 font-weight=%22900%22 letter-spacing=%22-1%22>bocadeli</text><circle cx=%22290%22 cy=%2232%22 r=%228%22 fill=%22%23dc2626%22/></svg>'">
+        <h2>Ruta360 - Regional</h2>
+        <p>Seleccione su nombre e ingrese su contraseña para continuar:</p>
+        <div class="login-input-group">
+            <label><i class="fa-solid fa-user"></i> Usuario</label>
+            <select id="select-usuario-login" class="login-select">
+                <option value="">-- Seleccione su Nombre --</option>
+            </select>
+        </div>
+        <div class="login-input-group">
+            <label><i class="fa-solid fa-key"></i> Contraseña</label>
+            <input type="password" id="input-password" class="login-input" placeholder="Ingrese su contraseña">
+        </div>
+        <div id="login-error">⚠️ Contraseña incorrecta. Intente nuevamente.</div>
+        <button class="login-btn" id="btn-login">Ingresar al Dashboard</button>
+        <div class="powered-by-card-text">powered by sales systems (commercial intelligence)</div>
+    </div>
+</div>
+
+<!-- ===== HEADER ===== -->
+<header>
+    <div class="header-brand">
+        <img src="assets/logo_bocadeli_blanco.png" class="header-logo" alt="Logo Bocadeli" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 320 80%22 fill=%22%23ffffff%22><text x=%2210%22 y=%2255%22 font-family=%22Arial, sans-serif%22 font-size=%2246%22 font-weight=%22900%22 letter-spacing=%22-1%22>bocadeli</text><circle cx=%22290%22 cy=%2232%22 r=%228%22 fill=%22%23dc2626%22/></svg>'">
+        <div class="header-text-group">
+            <span class="header-title-text">BOCADELI - SV CENTRO</span>
+            <span class="header-sub-text">Inteligencia comercial</span>
+        </div>
+    </div>
+    <div class="header-user-info">
+        <div class="user-pill" id="user-session-display">
+            <i class="fa-solid fa-user-shield"></i> <span id="txt-rol-activo">Invitado</span>
+        </div>
+        <button class="btn-logout" id="btn-logout" title="Cerrar Sesión">
+            <i class="fa-solid fa-right-from-bracket"></i> Salir
+        </button>
+        <div class="badge-date">
+            <i class="fa-regular fa-calendar-days"></i>
+            <span id="fecha-actual">Cargando...</span>
+        </div>
+    </div>
+</header>
+
+<!-- ===== MAIN ===== -->
+<div class="main-container">
+    <aside class="sidebar" id="mobile-drawer">
+        <div class="drawer-handle" id="drawer-handle">
+            <div class="pill"></div>
+            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                <span><i class="fa-solid fa-sliders"></i> Filtros e Indicadores</span>
+                <span id="drawer-btn-label" style="color: #38bdf8; font-size: 0.75rem; font-weight: 600;">
+                    <i class="fa-solid fa-chevron-down"></i> Ocultar
+                </span>
+            </div>
+        </div>
+
+        <!-- Panel Admin -->
+        <div class="admin-panel" id="panel-admin-actualizacion">
+            <label><i class="fa-solid fa-cloud-arrow-up"></i> Carga Temporal / Pruebas (Admin)</label>
+            <div>
+                <span style="font-size:0.68rem; color:#475569; display:block; margin-bottom:2px;">1. Clientes (CSV):</span>
+                <input type="file" id="file-csv-input" accept=".csv" class="admin-file-input">
+            </div>
+            <div>
+                <span style="font-size:0.68rem; color:#475569; display:block; margin-bottom:2px; margin-top:4px;">2. Geocercas Rutas (GeoJSON):</span>
+                <input type="file" id="file-geojson-input" accept=".geojson,.json" class="admin-file-input">
+            </div>
+            <div>
+                <span style="font-size:0.68rem; color:#475569; display:block; margin-bottom:2px; margin-top:4px;">3. Geocercas Distribuidoras (GeoJSON):</span>
+                <input type="file" id="file-distribuidoras-input" accept=".geojson,.json" class="admin-file-input">
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="filter-section">
+            <label><i class="fa-solid fa-layer-group"></i> Grupo Operativo</label>
+            <select id="select-grupo"></select>
+        </div>
+        <div class="filter-section">
+            <label><i class="fa-solid fa-route"></i> Ruta</label>
+            <select id="select-ruta">
+                <option value="TODOS">-- Todas las Rutas --</option>
+            </select>
+        </div>
+        <div class="filter-section">
+            <label><i class="fa-regular fa-calendar-days"></i> Día de Visita</label>
+            <div class="day-buttons">
+                <button class="btn-day" data-dia="TODOS">TODOS</button>
+                <button class="btn-day" data-dia="Lunes">Lun</button>
+                <button class="btn-day" data-dia="Martes">Mar</button>
+                <button class="btn-day" data-dia="Miércoles">Mié</button>
+                <button class="btn-day" data-dia="Jueves">Jue</button>
+                <button class="btn-day" data-dia="Viernes">Vie</button>
+                <button class="btn-day" data-dia="Sábado">Sáb</button>
+            </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpi-grid">
+            <div class="kpi-card"><div class="val" id="kpi-total">0</div><div class="lbl">Filtrados</div></div>
+            <div class="kpi-card"><div class="val" id="kpi-coords">0</div><div class="lbl">C/ Coords</div></div>
+            <div class="kpi-card alert"><div class="val" id="kpi-fuera">0</div><div class="lbl">Fuera Geoc.</div></div>
+            <div class="kpi-card success"><div class="val" id="kpi-visitados">0</div><div class="lbl">Visitados</div></div>
+            <div class="kpi-card info"><div class="val" id="kpi-pendientes">0</div><div class="lbl">Pendientes</div></div>
+            <div class="kpi-card success"><div class="val" id="kpi-porcentaje">0%</div><div class="lbl">% Avance</div></div>
+        </div>
+
+        <!-- Tabla Clientes -->
+        <div class="table-section">
+            <div class="table-title">
+                <span><i class="fa-solid fa-table-list"></i> Detalle de Clientes Registrados</span>
+                <span style="font-size:0.6rem; color:#64748b; font-weight:normal;">(Clic para ubicar)</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Cód.</th><th>Cliente</th><th>Ruta</th><th>Día</th><th>Estado</th></tr></thead>
+                    <tbody id="tabla-clientes-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tabla Fuera -->
+        <div class="table-section">
+            <div class="table-title" style="color:#dc2626;">
+                <span><i class="fa-solid fa-triangle-exclamation"></i> Clientes Fuera de Geocerca</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Cód.</th><th>Cliente</th><th>Ruta</th><th>Día</th></tr></thead>
+                    <tbody id="tabla-fuera-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Botones descarga -->
+        <div class="download-section">
+            <button class="btn-download btn-download-visited" id="btn-download-visited">
+                <i class="fa-solid fa-file-excel"></i> Descargar Clientes Visitados (.xlsx)
+            </button>
+            <button class="btn-download btn-download-itinerary" id="btn-download-itinerary">
+                <i class="fa-solid fa-file-export"></i> Descargar Itinerario Filtrado (.xlsx)
+            </button>
+        </div>
+    </aside>
+
+    <div id="map"></div>
+</div>
+
+<script>
+// ============================================================
+//  CONFIGURACIÓN (igual que en el código original)
+// ============================================================
+const USUARIOS_ROLES = [
+    { nombre: "JORGE LUIS PINEDA", rol: "Supervisor", grupo: "GRUPO_01", pass: "G01" },
+    { nombre: "OSCAR ANTONIO DEL CID", rol: "Supervisor", grupo: "GRUPO_02", pass: "G02" },
+    { nombre: "RICARDO ERNESTO RIVAS", rol: "Supervisor", grupo: "GRUPO_03", pass: "G03" },
+    { nombre: "NOE ALBERTO CORNEJO", rol: "Supervisor", grupo: "GRUPO_04", pass: "G04" },
+    { nombre: "CHRISTIAN CORTEZ", rol: "Supervisor", grupo: "GRUPO_05", pass: "G05" },
+    { nombre: "JAIME NAVARRO", rol: "Supervisor", grupo: "GRUPO_06", pass: "G06" },
+    { nombre: "RUBEN OCEAS HERNANDEZ", rol: "Supervisor", grupo: "GRUPO_07", pass: "G07" },
+    { nombre: "EDWIN ADONAY GALEAS", rol: "Supervisor", grupo: "GRUPO_08", pass: "G08" },
+    { nombre: "LUIS ALFREDO LOPEZ", rol: "Supervisor", grupo: "GRUPO_09", pass: "G09" },
+    { nombre: "MANUEL ANTONIO ORELLANA", rol: "Supervisor", grupo: "GRUPO_10", pass: "G10" },
+    { nombre: "NOE HERNANDEZ", rol: "Jefatura", grupo: "TODOS", pass: "BOCADELI" },
+    { nombre: "ALVARO CAMPOS", rol: "Jefatura", grupo: "TODOS", pass: "BOCADELI" },
+    { nombre: "JESSICA MEJIA", rol: "Jefatura", grupo: "TODOS", pass: "BOCADELI" },
+    { nombre: "WILBER MERCADO", rol: "Jefatura", grupo: "TODOS", pass: "BOCADELI" },
+    { nombre: "ISRAEL CONSUEGRA", rol: "Administrador", grupo: "TODOS", pass: "SVCENTRO" },
+    { nombre: "PAOLA CASTANEDA", rol: "Analista", grupo: "TODOS", pass: "SVCENTRO" },
+    { nombre: "ALDAHIR RODRIGUEZ", rol: "Analista", grupo: "TODOS", pass: "SVCENTRO" },
+    { nombre: "RENE DOMINGUEZ", rol: "Analista", grupo: "TODOS", pass: "SVCENTRO" },
+    { nombre: "JACQUELINE GUILLEN", rol: "Analista", grupo: "TODOS", pass: "SVCENTRO" }
+];
+
+const MAPEO_RUTAS_GRUPOS = {
+    '1.1.54': 'GRUPO_02',
+    '1.1.51': 'GRUPO_05',
+    '1.2.45': 'GRUPO_06',
+    '1.2.46': 'GRUPO_06'
+};
+
+// ============================================================
+//  VARIABLES GLOBALES
+// ============================================================
+let rawClientes = [];
+let rawGeocercas = { type: "FeatureCollection", features: [] };
+let rawDistribuidoras = { type: "FeatureCollection", features: [] };
+let usuarioActual = null;
+let diaSeleccionado = 'NINGUNO';
+let map = null;
+let markersGroup = null;
+let geocercasLayerGroup = null;
+let distribuidorasLayerGroup = null;
+const clienteMarkersMap = {};
+const clientesVisitadosMap = new Map();
+let ultimoClientesFiltrados = [];
+let ultimoClientesFuera = [];
+
+// ============================================================
+//  FUNCIONES DE CARGA DE DATOS (desde archivos en data/)
+// ============================================================
+function cargarClientes(url = 'data/clientes.csv') {
+    return new Promise((resolve, reject) => {
+        fetch(url)
+            .then(res => {
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.text();
+            })
+            .then(csvText => {
+                Papa.parse(csvText, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        const parsed = results.data;
+                        const clientes = parsed.map(row => {
+                            const keys = Object.keys(row);
+                            const cCol = keys.find(k => k.toLowerCase().includes('codigo') || k.toLowerCase().includes('cliente')) || keys[0];
+                            const nCol = keys.find(k => k.toLowerCase().includes('nombre')) || keys[1];
+                            const gCol = keys.find(k => k.toLowerCase().includes('grupo')) || 'grupo';
+                            const rCol = keys.find(k => k.toLowerCase().includes('ruta')) || 'ruta';
+                            const dCol = keys.find(k => k.toLowerCase().includes('dia') || k.toLowerCase().includes('día')) || 'dia';
+                            const latCol = keys.find(k => k.toLowerCase().includes('lat')) || 'latitud';
+                            const lngCol = keys.find(k => k.toLowerCase().includes('lon') || k.toLowerCase().includes('lng')) || 'longitud';
+                            const dirCol = keys.find(k => k.toLowerCase().includes('dir') || k.toLowerCase().includes('domicilio')) || 'direccion';
+
+                            let rVal = row[rCol] ? String(row[rCol]).trim() : "S/R";
+                            if (rVal.length > 15 || rVal.includes(',')) rVal = "S/R";
+
+                            let gVal = row[gCol] ? String(row[gCol]).toUpperCase() : "SIN GRUPO";
+                            const m = gVal.match(/([0-9]+)/);
+                            let grupoClean = m ? "GRUPO_" + m[1].padStart(2, '0') : "Sin Grupo";
+                            if (MAPEO_RUTAS_GRUPOS[rVal]) grupoClean = MAPEO_RUTAS_GRUPOS[rVal];
+
+                            return {
+                                codigo: String(row[cCol] || 'S/C').trim(),
+                                nombre: String(row[nCol] || 'Cliente').trim(),
+                                grupo: grupoClean,
+                                ruta: rVal,
+                                dia: row[dCol] ? String(row[dCol]).trim() : 'Sin Día',
+                                direccion: row[dirCol] ? String(row[dirCol]).trim() : 'Sin dirección',
+                                lat: row[latCol] ? parseFloat(row[latCol]) : null,
+                                lng: row[lngCol] ? parseFloat(row[lngCol]) : null
+                            };
+                        });
+                        rawClientes = clientes;
+                        resolve(clientes);
+                    },
+                    error: function(err) { reject(err); }
+                });
+            })
+            .catch(err => reject(err));
+    });
+}
+
+function cargarGeoJSON(url) {
+    return fetch(url).then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+    });
+}
+
+function cargarDatosIniciales() {
+    const promClientes = cargarClientes('data/clientes.csv').catch(err => {
+        console.warn('No se pudo cargar clientes.csv, se usará array vacío', err);
+        return [];
+    });
+    const promGeocercas = cargarGeoJSON('data/geocercas_rutas.geojson').catch(err => {
+        console.warn('No se pudo cargar geocercas_rutas.geojson, se usará null', err);
+        return { type: "FeatureCollection", features: [] };
+    });
+    const promDistribuidoras = cargarGeoJSON('data/geocercas_distribuidoras.geojson').catch(err => {
+        console.warn('No se pudo cargar geocercas_distribuidoras.geojson, se usará null', err);
+        return { type: "FeatureCollection", features: [] };
+    });
+
+    return Promise.all([promClientes, promGeocercas, promDistribuidoras])
+        .then(([clientes, geocercas, distribuidoras]) => {
+            rawClientes = clientes;
+            rawGeocercas = geocercas || { type: "FeatureCollection", features: [] };
+            rawDistribuidoras = distribuidoras || { type: "FeatureCollection", features: [] };
+            procesarPropiedadesGeocercas();
+            return { clientes, geocercas: rawGeocercas, distribuidoras: rawDistribuidoras };
+        });
+}
+
+function procesarPropiedadesGeocercas() {
+    if (!rawGeocercas || !rawGeocercas.features) return;
+    rawGeocercas.features.forEach(feat => {
+        const props = feat.properties || {};
+        const rutaName = String(props.Name || props.name || props.nambe || '').trim();
+        feat.properties.ruta_clean = rutaName;
+        let grupoClean = "Sin Grupo";
+        if (MAPEO_RUTAS_GRUPOS[rutaName]) {
+            grupoClean = MAPEO_RUTAS_GRUPOS[rutaName];
+        } else {
+            const m_g = String(props.description || '').match(/GRUPO\s*([0-9]+)/i);
+            if (m_g) {
+                grupoClean = "GRUPO_" + m_g[1].padStart(2, '0');
+            } else if (rawClientes && rawClientes.length > 0) {
+                const matchCliente = rawClientes.find(c => c.ruta === rutaName && c.grupo && c.grupo !== "Sin Grupo");
+                if (matchCliente) grupoClean = matchCliente.grupo;
+            }
+        }
+        feat.properties.grupo_clean = grupoClean;
+    });
+}
+
+// ============================================================
+//  FUNCIONES DE MAPA Y GEOCERCAS
+// ============================================================
+function inicializarMapa() {
+    if (map) { map.remove(); map = null; }
+    map = L.map('map').setView([13.6929, -89.2182], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+    distribuidorasLayerGroup = L.layerGroup().addTo(map);
+    geocercasLayerGroup = L.layerGroup().addTo(map);
+    markersGroup = L.layerGroup().addTo(map);
+}
+
+function renderizarGeocercas(featuresGeocercasFiltradas, rutaSeleccionada) {
+    geocercasLayerGroup.clearLayers();
+    if (!featuresGeocercasFiltradas || featuresGeocercasFiltradas.length === 0) return;
+    L.geoJSON(
+        { type: "FeatureCollection", features: featuresGeocercasFiltradas },
+        {
+            style: function(feature) {
+                const r = feature.properties.ruta_clean || '';
+                if (rutaSeleccionada !== 'TODOS' && r.toUpperCase() === rutaSeleccionada.toUpperCase()) {
+                    return { color: '#0284c7', weight: 3, fillColor: '#38bdf8', fillOpacity: 0.20, className: 'glow-geofence' };
+                }
+                return { color: '#1e3a8a', weight: 1.5, fillColor: '#3b82f6', fillOpacity: 0.10 };
+            },
+            onEachFeature: function(feature, layer) {
+                const realRuta = feature.properties.ruta_clean || 'N/A';
+                const realGrupo = feature.properties.grupo_clean || 'Sin Grupo';
+                layer.bindPopup(`
+                    <div style="font-family:'Inter',sans-serif; padding:4px;">
+                        <b style="color:#1e3a8a; font-size:0.9rem;"><i class="fa-solid fa-draw-polygon"></i> Cobertura Geocerca</b><br>
+                        <b>Grupo:</b> ${realGrupo}<br>
+                        <b>Ruta:</b> ${realRuta}
+                    </div>
+                `);
+            }
+        }
+    ).addTo(geocercasLayerGroup);
+}
+
+function renderizarDistribuidoras(distribuidorasData) {
+    distribuidorasLayerGroup.clearLayers();
+    if (!distribuidorasData || !distribuidorasData.features || distribuidorasData.features.length === 0) return;
+    L.geoJSON(distribuidorasData, {
+        style: { color: '#d9534f', weight: 2, fillColor: '#d9534f', fillOpacity: 0.12 },
+        onEachFeature: function(feature, layer) {
+            const props = feature.properties || {};
+            const nombreDist = props.nambe || props.Name || props.name || props.DISTRIBUIDORA || 'Distribuidora Bocadeli';
+            layer.bindPopup(`
+                <div style="font-family:'Inter',sans-serif; padding:4px;">
+                    <b style="color:#0b1e42; font-size:0.9rem;"><i class="fa-solid fa-building"></i> ${nombreDist}</b>
+                </div>
+            `);
+        }
+    }).addTo(distribuidorasLayerGroup);
+}
+
+function renderizarMarcadores(clientesFiltrados, featuresGeocercasFiltradas) {
+    markersGroup.clearLayers();
+    Object.keys(clienteMarkersMap).forEach(key => delete clienteMarkersMap[key]);
+    let bounds = L.latLngBounds();
+    let conCoords = 0;
+    const fuera = [];
+
+    clientesFiltrados.forEach(c => {
+        if (c.lat && c.lng && !isNaN(c.lat) && !isNaN(c.lng)) {
+            conCoords++;
+            bounds.extend([c.lat, c.lng]);
+            const isVisited = clientesVisitadosMap.get(c.codigo) || false;
+            const marker = L.circleMarker([c.lat, c.lng], {
+                radius: 6,
+                fillColor: isVisited ? '#16a34a' : '#2563eb',
+                color: isVisited ? '#15803d' : '#1e40af',
+                weight: 1.5,
+                fillOpacity: 0.85
+            }).bindPopup(generarPopupHTML(c, isVisited));
+            marker.addTo(markersGroup);
+            clienteMarkersMap[c.codigo] = marker;
+            if (!estaDentroDeGeocercas(c.lat, c.lng, featuresGeocercasFiltradas)) {
+                fuera.push(c);
+            }
+        }
+    });
+
+    document.getElementById('kpi-coords').innerText = conCoords;
+    document.getElementById('kpi-fuera').innerText = fuera.length;
+    return { bounds, fuera };
+}
+
+function generarPopupHTML(c, isVisited) {
+    const chkAttr = isVisited ? "checked" : "";
+    let navButtons = c.lat && c.lng 
+        ? `<div style="display: flex; gap: 6px; margin: 8px 0;">
+            <a href="http://googleusercontent.com/maps.google.com/4${c.lat},${c.lng}" target="_blank" class="nav-btn btn-gmaps"><i class="fa-solid fa-location-dot"></i> Maps</a>
+            <a href="https://waze.com/ul?ll=${c.lat},${c.lng}&navigate=yes" target="_blank" class="nav-btn btn-waze"><i class="fa-solid fa-location-arrow"></i> Waze</a>
+           </div>`
+        : `<div style="font-size: 0.75rem; color: #ef4444; margin: 6px 0; font-weight: 600;">⚠️ Sin coordenadas registradas</div>`;
+    return `
+        <div style="font-family: 'Inter', sans-serif; padding: 4px; min-width: 200px;">
+            <b style="font-size: 0.95rem; color: #0f172a;">${c.nombre}</b><br>
+            <hr style="margin: 6px 0; border: 0; border-top: 1px solid #cbd5e1;">
+            <div style="font-size: 0.84rem; color: #334155; line-height: 1.5;">
+                <b>Código:</b> ${c.codigo}<br>
+                <b>Grupo:</b> ${c.grupo}<br>
+                <b>Ruta:</b> ${c.ruta}<br>
+                <b>Día:</b> ${c.dia}<br>
+                <b>Dirección:</b> ${c.direccion}
+            </div>
+            ${navButtons}
+            <div style="background: #f8fafc; padding: 6px 8px; border-radius: 6px; border: 1px solid #cbd5e1; display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="chk-vis-${c.codigo}" ${chkAttr} onchange="cambiarEstadoVisitado('${c.codigo}', this.checked)" style="width: 16px; height: 16px; cursor: pointer;">
+                <label for="chk-vis-${c.codigo}" style="font-size: 0.82rem; font-weight: 700; color: #16a34a; cursor: pointer; user-select: none;">Marcar como Visitado</label>
+            </div>
+        </div>
+    `;
+}
+
+function puntoEnPoligono(point, vs) {
+    const x = point[0], y = point[1];
+    let inside = false;
+    for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+        const xi = vs[i][0], yi = vs[i][1];
+        const xj = vs[j][0], yj = vs[j][1];
+        const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+
+function estaDentroDeGeocercas(lat, lng, featuresGeocercas) {
+    if (!featuresGeocercas || featuresGeocercas.length === 0) return true;
+    const pt = [lng, lat];
+    for (let feat of featuresGeocercas) {
+        const geom = feat.geometry;
+        if (!geom) continue;
+        if (geom.type === 'Polygon') {
+            for (let ring of geom.coordinates) {
+                if (puntoEnPoligono(pt, ring)) return true;
+            }
+        } else if (geom.type === 'MultiPolygon') {
+            for (let polyCoords of geom.coordinates) {
+                for (let ring of polyCoords) {
+                    if (puntoEnPoligono(pt, ring)) return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+function cambiarEstadoVisitado(codigo, visitado) {
+    clientesVisitadosMap.set(codigo, visitado);
+    const marker = clienteMarkersMap[codigo];
+    if (marker) {
+        marker.setStyle({
+            fillColor: visitado ? '#16a34a' : '#2563eb',
+            color: visitado ? '#15803d' : '#1e40af',
+            fillOpacity: visitado ? 0.95 : 0.85
+        });
+        const clientObj = rawClientes.find(c => c.codigo === codigo);
+        if (clientObj) marker.setPopupContent(generarPopupHTML(clientObj, visitado));
+    }
+    const fila = document.getElementById(`row-cli-${codigo}`);
+    if (fila) {
+        const cellEstado = fila.querySelector('.col-estado');
+        if (visitado) {
+            fila.classList.add('visited-row');
+            if (cellEstado) cellEstado.innerHTML = '<span style="color:#16a34a; font-weight:bold;"><i class="fa-solid fa-circle-check"></i> Visitado</span>';
+        } else {
+            fila.classList.remove('visited-row');
+            if (cellEstado) cellEstado.innerHTML = '<span style="color:#94a3b8;"><i class="fa-regular fa-circle"></i> Pendiente</span>';
+        }
+    }
+    actualizarKPIsVisitas();
+}
+
+// ============================================================
+//  FILTROS Y ACTUALIZACIÓN DE UI
+// ============================================================
+function poblarFiltrosPermitidos() {
+    const selectGrupo = document.getElementById('select-grupo');
+    selectGrupo.innerHTML = '';
+    const gruposUnicos = [...new Set(rawClientes.map(c => c.grupo))]
+        .filter(g => /^GRUPO_\d+$/i.test(g))
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+    if (usuarioActual && usuarioActual.rol === 'Supervisor') {
+        const opt = document.createElement('option');
+        opt.value = usuarioActual.grupo;
+        opt.textContent = usuarioActual.grupo;
+        selectGrupo.appendChild(opt);
+        selectGrupo.value = usuarioActual.grupo;
+        selectGrupo.disabled = true;
+    } else {
+        const optTodos = document.createElement('option');
+        optTodos.value = "TODOS";
+        optTodos.textContent = "-- Todos los Grupos --";
+        selectGrupo.appendChild(optTodos);
+        gruposUnicos.forEach(g => {
+            const opt = document.createElement('option');
+            opt.value = g;
+            opt.textContent = g;
+            selectGrupo.appendChild(opt);
+        });
+        selectGrupo.value = "TODOS";
+        selectGrupo.disabled = false;
+    }
+    actualizarOpcionesRuta();
+}
+
+function actualizarOpcionesRuta() {
+    const selectGrupo = document.getElementById('select-grupo').value;
+    const selectRuta = document.getElementById('select-ruta');
+    const rutaPrevia = selectRuta.value;
+    selectRuta.innerHTML = '<option value="TODOS">-- Todas las Rutas --</option>';
+    let clientesFiltrados = rawClientes;
+    if (selectGrupo !== 'TODOS') {
+        clientesFiltrados = rawClientes.filter(c => c.grupo === selectGrupo);
+    }
+    const rutasUnicas = [...new Set(clientesFiltrados.map(c => c.ruta))]
+        .filter(r => r && r !== 'S/R' && r !== 'nan' && !r.includes(',') && r.length < 15)
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    rutasUnicas.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r;
+        opt.textContent = r;
+        selectRuta.appendChild(opt);
+    });
+    if (rutasUnicas.includes(rutaPrevia)) selectRuta.value = rutaPrevia;
+}
+
+function aplicarFiltros() {
+    const grupoSel = document.getElementById('select-grupo').value;
+    const rutaSel = document.getElementById('select-ruta').value;
+
+    let featuresGeocercasFiltradas = [];
+    if (rawGeocercas && rawGeocercas.features) {
+        featuresGeocercasFiltradas = rawGeocercas.features.filter(f => {
+            const g = f.properties.grupo_clean || 'Sin Grupo';
+            if (grupoSel !== 'TODOS' && g !== grupoSel) return false;
+            if (rutaSel !== 'TODOS') {
+                const r = f.properties.ruta_clean || '';
+                if (r.toUpperCase() !== rutaSel.toUpperCase()) return false;
+            }
+            return true;
+        });
+    }
+
+    let clientesFiltrados = [];
+    if (diaSeleccionado !== 'NINGUNO') {
+        clientesFiltrados = rawClientes.filter(c => {
+            const matchGrupo = (grupoSel === 'TODOS') || (c.grupo === grupoSel);
+            const matchRuta = (rutaSel === 'TODOS') || (c.ruta === rutaSel);
+            let matchDia = false;
+            if (diaSeleccionado === 'TODOS') {
+                matchDia = true;
+            } else {
+                const d1 = (c.dia || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                const d2 = diaSeleccionado.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                matchDia = (d1 === d2);
+            }
+            return matchGrupo && matchRuta && matchDia;
+        });
+    } else {
+        clientesFiltrados = [];
+    }
+
+    ultimoClientesFiltrados = clientesFiltrados;
+    renderizarDistribuidoras(rawDistribuidoras);
+    renderizarGeocercas(featuresGeocercasFiltradas, rutaSel);
+    const { bounds, fuera } = renderizarMarcadores(clientesFiltrados, featuresGeocercasFiltradas);
+    ultimoClientesFuera = fuera;
+
+    actualizarTablaClientes(clientesFiltrados);
+    actualizarTablaFuera(fuera);
+    document.getElementById('kpi-total').innerText = clientesFiltrados.length;
+    actualizarKPIsVisitas();
+
+    if (bounds.isValid()) {
+        const maxZ = rutaSel !== 'TODOS' ? 15 : (grupoSel !== 'TODOS' ? 13 : 11);
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: maxZ, animate: true });
+    }
+}
+
+function actualizarTablaClientes(clientes) {
+    const tbody = document.getElementById('tabla-clientes-body');
+    tbody.innerHTML = '';
+    clientes.slice(0, 300).forEach(c => {
+        const isVisited = clientesVisitadosMap.get(c.codigo) || false;
+        const tr = document.createElement('tr');
+        tr.id = `row-cli-${c.codigo}`;
+        tr.className = `clickable-row ${isVisited ? 'visited-row' : ''}`;
+        tr.onclick = () => seleccionarClienteEnMapa(c.codigo);
+        tr.innerHTML = `
+            <td style="font-weight:700;color:#1e3a8a;">${c.codigo}</td>
+            <td>${c.nombre}</td>
+            <td><span style="background:#e0f2fe; color:#0369a1; padding:2px 5px; border-radius:4px; font-weight:bold;">${c.ruta}</span></td>
+            <td>${c.dia}</td>
+            <td class="col-estado">
+                ${isVisited ? '<span style="color:#16a34a; font-weight:bold;"><i class="fa-solid fa-circle-check"></i> Visitado</span>' : '<span style="color:#94a3b8;"><i class="fa-regular fa-circle"></i> Pendiente</span>'}
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function actualizarTablaFuera(clientesFuera) {
+    const tbody = document.getElementById('tabla-fuera-body');
+    tbody.innerHTML = '';
+    clientesFuera.forEach(c => {
+        const tr = document.createElement('tr');
+        tr.className = `clickable-row outside-row`;
+        tr.onclick = () => seleccionarClienteEnMapa(c.codigo);
+        tr.innerHTML = `
+            <td style="font-weight:700;color:#dc2626;">${c.codigo}</td>
+            <td>${c.nombre}</td>
+            <td><span style="background:#fee2e2; color:#b91c1c; padding:2px 5px; border-radius:4px; font-weight:bold;">${c.ruta}</span></td>
+            <td>${c.dia}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function actualizarKPIsVisitas() {
+    let total = ultimoClientesFiltrados.length;
+    let visitados = 0;
+    ultimoClientesFiltrados.forEach(c => { if (clientesVisitadosMap.get(c.codigo) === true) visitados++; });
+    let pendientes = total - visitados;
+    let porcentaje = total > 0 ? Math.round((visitados / total) * 100) : 0;
+    document.getElementById('kpi-visitados').innerText = visitados;
+    document.getElementById('kpi-pendientes').innerText = pendientes;
+    document.getElementById('kpi-porcentaje').innerText = porcentaje + '%';
+}
+
+function seleccionarClienteEnMapa(codigo) {
+    const marker = clienteMarkersMap[codigo];
+    const clientObj = rawClientes.find(c => c.codigo === codigo);
+    if (marker && clientObj && clientObj.lat && clientObj.lng) {
+        if (window.innerWidth <= 768) {
+            const drawer = document.getElementById('mobile-drawer');
+            if (!drawer.classList.contains('collapsed')) toggleDrawer();
+        }
+        map.setView([clientObj.lat, clientObj.lng], 16, { animate: true });
+        setTimeout(() => { marker.openPopup(); }, 280);
+    } else {
+        alert("⚠️ Este cliente no posee coordenadas geográficas válidas.");
+    }
+}
+
+// ============================================================
+//  FUNCIONES DE ADMIN (carga de archivos)
+// ============================================================
+function subirNuevoCSV(file) {
+    if (!file) return;
+    Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+            const parsedData = results.data;
+            const nuevosClientes = [];
+            parsedData.forEach(row => {
+                const keys = Object.keys(row);
+                const cCol = keys.find(k => k.toLowerCase().includes('codigo') || k.toLowerCase().includes('cliente')) || keys[0];
+                const nCol = keys.find(k => k.toLowerCase().includes('nombre')) || keys[1];
+                const gCol = keys.find(k => k.toLowerCase().includes('grupo')) || 'grupo';
+                const rCol = keys.find(k => k.toLowerCase().includes('ruta')) || 'ruta';
+                const dCol = keys.find(k => k.toLowerCase().includes('dia') || k.toLowerCase().includes('día')) || 'dia';
+                const latCol = keys.find(k => k.toLowerCase().includes('lat')) || 'latitud';
+                const lngCol = keys.find(k => k.toLowerCase().includes('lon') || k.toLowerCase().includes('lng')) || 'longitud';
+                const dirCol = keys.find(k => k.toLowerCase().includes('dir') || k.toLowerCase().includes('domicilio')) || 'direccion';
+                let rVal = row[rCol] ? String(row[rCol]).trim() : "S/R";
+                if (rVal.length > 15 || rVal.includes(',')) rVal = "S/R";
+                let gVal = row[gCol] ? String(row[gCol]).toUpperCase() : "SIN GRUPO";
+                const m = gVal.match(/([0-9]+)/);
+                let grupoClean = m ? "GRUPO_" + m[1].padStart(2, '0') : "Sin Grupo";
+                if (MAPEO_RUTAS_GRUPOS[rVal]) grupoClean = MAPEO_RUTAS_GRUPOS[rVal];
+                nuevosClientes.push({
+                    codigo: String(row[cCol] || 'S/C').trim(),
+                    nombre: String(row[nCol] || 'Cliente').trim(),
+                    grupo: grupoClean,
+                    ruta: rVal,
+                    dia: row[dCol] ? String(row[dCol]).trim() : 'Sin Día',
+                    direccion: row[dirCol] ? String(row[dirCol]).trim() : 'Sin dirección',
+                    lat: row[latCol] ? parseFloat(row[latCol]) : null,
+                    lng: row[lngCol] ? parseFloat(row[lngCol]) : null
+                });
+            });
+            rawClientes = nuevosClientes;
+            procesarPropiedadesGeocercas();
+            poblarFiltrosPermitidos();
+            aplicarFiltros();
+            alert("✅ Archivo CSV de clientes cargado en memoria local.");
+        }
+    });
+}
+
+function subirNuevoGeoJSON(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const geojsonData = JSON.parse(e.target.result);
+            rawGeocercas = geojsonData;
+            procesarPropiedadesGeocercas();
+            poblarFiltrosPermitidos();
+            aplicarFiltros();
+            alert("✅ Geocercas de Rutas cargadas en memoria local.");
+        } catch(err) {
+            alert("❌ Error al procesar GeoJSON: " + err);
+        }
+    };
+    reader.readAsText(file);
+}
+
+function subirNuevoGeoJSONDistribuidoras(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const geojsonData = JSON.parse(e.target.result);
+            rawDistribuidoras = geojsonData;
+            aplicarFiltros();
+            alert("✅ Geocercas de Distribuidoras cargadas en memoria local.");
+        } catch(err) {
+            alert("❌ Error al procesar GeoJSON de Distribuidoras: " + err);
+        }
+    };
+    reader.readAsText(file);
+}
+
+// ============================================================
+//  FUNCIONES DE DESCARGA
+// ============================================================
+function descargarClientesVisitados() {
+    const listVisitados = [];
+    rawClientes.forEach(c => {
+        if (clientesVisitadosMap.get(c.codigo) === true) {
+            listVisitados.push({
+                "Ruta": c.ruta,
+                "Codigo": c.codigo,
+                "Cliente": c.nombre,
+                "Direccion": c.direccion,
+                "Dia de visita": c.dia
+            });
+        }
+    });
+    if (listVisitados.length === 0) {
+        alert("⚠️ No hay ningún cliente marcado como 'Visitado' aún.");
+        return;
+    }
+    const worksheet = XLSX.utils.json_to_sheet(listVisitados);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Clientes Visitados");
+    const fecha = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `Clientes_Visitados_Bocadeli_${fecha}.xlsx`);
+}
+
+function descargarItinerarioFiltrado() {
+    if (!ultimoClientesFiltrados || ultimoClientesFiltrados.length === 0) {
+        alert("⚠️ No hay clientes disponibles en la lista con los filtros seleccionados.");
+        return;
+    }
+    const grupoSel = document.getElementById('select-grupo').value;
+    const rutaSel = document.getElementById('select-ruta').value;
+    const diaSel = diaSeleccionado;
+    const datosExportar = ultimoClientesFiltrados.map(c => ({
+        "Grupo": c.grupo,
+        "Ruta": c.ruta,
+        "Codigo": c.codigo,
+        "Cliente": c.nombre,
+        "Direccion": c.direccion,
+        "Dia de visita": c.dia,
+        "Estado Visitado": clientesVisitadosMap.get(c.codigo) ? "SÍ" : "NO",
+        "Fuera de Geocerca": ultimoClientesFuera.some(f => f.codigo === c.codigo) ? "SÍ" : "NO"
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(datosExportar);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Itinerario");
+    const nombreGrupo = grupoSel !== 'TODOS' ? grupoSel : 'TodosGrupos';
+    const nombreRuta = rutaSel !== 'TODOS' ? `Ruta_${rutaSel}` : 'TodasRutas';
+    const nombreDia = diaSel !== 'TODOS' && diaSel !== 'NINGUNO' ? `_Dia_${diaSel}` : '';
+    XLSX.writeFile(workbook, `Itinerario_${nombreGrupo}_${nombreRuta}${nombreDia}.xlsx`);
+}
+
+// ============================================================
+//  LOGIN Y SESIÓN
+// ============================================================
+function poblarModalLogin() {
+    const selectLogin = document.getElementById('select-usuario-login');
+    selectLogin.innerHTML = '<option value="">-- Seleccione su Nombre --</option>';
+    const sorted = [...USUARIOS_ROLES].sort((a, b) => a.nombre.localeCompare(b.nombre));
+    sorted.forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u.nombre;
+        opt.textContent = u.nombre;
+        selectLogin.appendChild(opt);
+    });
+}
+
+function validarLogin() {
+    const nombreSel = document.getElementById('select-usuario-login').value;
+    const passInput = document.getElementById('input-password').value.trim().toLowerCase();
+    const errorDiv = document.getElementById('login-error');
+    if (!nombreSel) {
+        errorDiv.textContent = "⚠️ Por favor seleccione su nombre.";
+        errorDiv.style.display = 'block';
+        return;
+    }
+    const userObj = USUARIOS_ROLES.find(u => u.nombre === nombreSel);
+    if (userObj && passInput === userObj.pass.toLowerCase()) {
+        usuarioActual = userObj;
+        document.getElementById('login-modal').style.display = 'none';
+        document.getElementById('txt-rol-activo').textContent = `${usuarioActual.nombre} (${usuarioActual.rol})`;
+        if (usuarioActual.rol === 'Administrador') {
+            document.getElementById('panel-admin-actualizacion').style.display = 'flex';
+        } else {
+            document.getElementById('panel-admin-actualizacion').style.display = 'none';
+        }
+        inicializarMapa();
+        poblarFiltrosPermitidos();
+        aplicarFiltros();
+    } else {
+        errorDiv.textContent = "⚠️ Contraseña incorrecta. Verifique e intente de nuevo.";
+        errorDiv.style.display = 'block';
+    }
+}
+
+function cerrarSesion() {
+    usuarioActual = null;
+    document.getElementById('input-password').value = '';
+    document.getElementById('login-error').style.display = 'none';
+    document.getElementById('login-modal').style.display = 'flex';
+    if (map) {
+        map.remove();
+        map = null;
+    }
+}
+
+function actualizarFechaActual() {
+    const fecha = new Date();
+    const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    let fechaTexto = fecha.toLocaleDateString('es-ES', opciones);
+    document.getElementById('fecha-actual').textContent = fechaTexto.charAt(0).toUpperCase() + fechaTexto.slice(1);
+}
+
+function toggleDrawer() {
+    const drawer = document.getElementById('mobile-drawer');
+    const label = document.getElementById('drawer-btn-label');
+    drawer.classList.toggle('collapsed');
+    label.innerHTML = drawer.classList.contains('collapsed') 
+        ? '<i class="fa-solid fa-chevron-up"></i> Mostrar Filtros e Indicadores' 
+        : '<i class="fa-solid fa-chevron-down"></i> Ocultar';
+    setTimeout(() => { if (map) map.invalidateSize(); }, 360);
+}
+
+// ============================================================
+//  EVENTOS Y ARRANQUE
+// ============================================================
+document.addEventListener('DOMContentLoaded', function() {
+    actualizarFechaActual();
+    poblarModalLogin();
+
+    document.getElementById('btn-login').addEventListener('click', validarLogin);
+    document.getElementById('input-password').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') validarLogin();
+    });
+    document.getElementById('btn-logout').addEventListener('click', cerrarSesion);
+    document.getElementById('select-grupo').addEventListener('change', function() {
+        actualizarOpcionesRuta();
+        aplicarFiltros();
+    });
+    document.getElementById('select-ruta').addEventListener('change', function() {
+        const rutaSel = this.value;
+        if (rutaSel !== 'TODOS') {
+            const clienteRuta = rawClientes.find(c => c.ruta === rutaSel);
+            if (clienteRuta && clienteRuta.grupo && usuarioActual && usuarioActual.rol !== 'Supervisor') {
+                document.getElementById('select-grupo').value = clienteRuta.grupo;
+                actualizarOpcionesRuta();
+                document.getElementById('select-ruta').value = rutaSel;
+            }
+        }
+        aplicarFiltros();
+    });
+
+    document.querySelectorAll('.btn-day').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const dia = this.getAttribute('data-dia');
+            if (diaSeleccionado === dia) {
+                diaSeleccionado = 'NINGUNO';
+                document.querySelectorAll('.btn-day').forEach(b => b.classList.remove('active'));
+            } else {
+                diaSeleccionado = dia;
+                document.querySelectorAll('.btn-day').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            }
+            aplicarFiltros();
+        });
+    });
+
+    document.getElementById('drawer-handle').addEventListener('click', toggleDrawer);
+
+    document.getElementById('btn-download-visited').addEventListener('click', descargarClientesVisitados);
+    document.getElementById('btn-download-itinerary').addEventListener('click', descargarItinerarioFiltrado);
+
+    document.getElementById('file-csv-input').addEventListener('change', function(e) {
+        if (this.files[0]) subirNuevoCSV(this.files[0]);
+    });
+    document.getElementById('file-geojson-input').addEventListener('change', function(e) {
+        if (this.files[0]) subirNuevoGeoJSON(this.files[0]);
+    });
+    document.getElementById('file-distribuidoras-input').addEventListener('change', function(e) {
+        if (this.files[0]) subirNuevoGeoJSONDistribuidoras(this.files[0]);
+    });
+
+    // Cargar datos iniciales (si fallan, se usan vacíos)
+    cargarDatosIniciales().then(() => {
+        console.log('Datos cargados correctamente.');
+        // Una vez cargados, el usuario debe hacer login; el login ya está visible.
+    }).catch(err => {
+        console.warn('Error al cargar datos iniciales, se usará datos vacíos', err);
+    });
+});
+</script>
+</body>
+</html>
