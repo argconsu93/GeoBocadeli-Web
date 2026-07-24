@@ -119,7 +119,6 @@
         }
         .btn-day.active { background: #1e3a8a; color: white; border-color: #1e3a8a; }
 
-        /* Novedad 1: Barra de Progreso Visual */
         .progress-container { background: #e2e8f0; border-radius: 10px; height: 12px; width: 100%; overflow: hidden; position: relative; margin-top: 2px; }
         .progress-bar { background: linear-gradient(90deg, #16a34a, #22c55e); height: 100%; width: 0%; transition: width 0.4s ease; border-radius: 10px; }
         .progress-text { position: absolute; top: 0; left: 0; width: 100%; height: 100%; font-size: 0.58rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; justify-content: center; }
@@ -175,7 +174,6 @@
             100% { filter: drop-shadow(0 0 4px rgba(56,189,248,0.7)); opacity: 0.95; }
         }
 
-        /* Estilos del Modal Comparativo */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px);
@@ -316,13 +314,11 @@
             <div class="kpi-card success"><div class="val" id="kpi-porcentaje">0%</div><div class="lbl">% Avance</div></div>
         </div>
 
-        <!-- Novedad 1: Barra Visual de Progreso -->
         <div class="progress-container">
             <div class="progress-bar" id="progress-bar-fill"></div>
             <div class="progress-text" id="progress-text">AVANCE DE CUMPLIMIENTO: 0%</div>
         </div>
 
-        <!-- Novedad 3: Buscador Rápido -->
         <div class="filter-section" style="margin-top: 4px;">
             <label><i class="fa-solid fa-magnifying-glass"></i> Buscar Cliente (Nombre / Código)</label>
             <input type="text" id="input-search-cliente" class="search-input" placeholder="Escriba para filtrar lista...">
@@ -354,11 +350,9 @@
         </div>
 
         <div class="download-section">
-            <!-- Novedad 5: Trazado de Ruta Óptima -->
             <button class="btn-download btn-route-opt" id="btn-trazar-ruta" disabled title="Seleccione Ruta y Día específico para habilitar">
                 <i class="fa-solid fa-route"></i> Trazar Ruta Óptima (Lejano ➔ Cercano)
             </button>
-            <!-- Novedad 2: Comparativo -->
             <button class="btn-download btn-compare" id="btn-abrir-comparativo">
                 <i class="fa-solid fa-chart-column"></i> Ver Comparativo de Cumplimiento
             </button>
@@ -374,7 +368,6 @@
     <div id="map"></div>
 </div>
 
-<!-- Modal Comparativo de Cumplimiento -->
 <div class="modal-overlay" id="modal-comparativo">
     <div class="modal-content">
         <div class="modal-header">
@@ -433,13 +426,14 @@ const MAPEO_RUTAS_GRUPOS = {
 let rawClientes = [];
 let rawGeocercas = { type: "FeatureCollection", features: [] };
 let rawDistribuidoras = { type: "FeatureCollection", features: [] };
+let rawRutasDistribuidoras = {}; // Mapeo de Ruta -> Distribuidora
 let usuarioActual = null;
 let diaSeleccionado = 'NINGUNO';
 let map = null;
 let markersGroup = null;
 let geocercasLayerGroup = null;
 let distribuidorasLayerGroup = null;
-let rutaOptimaLayerGroup = null; // Capa para dibujar el recorrido
+let rutaOptimaLayerGroup = null;
 const clienteMarkersMap = {};
 const clientesVisitadosMap = new Map();
 let ultimoClientesFiltrados = [];
@@ -508,21 +502,32 @@ function cargarGeoJSON(url) {
     });
 }
 
-function cargarDatosIniciales() {
-    const promClientes = cargarClientes('data/clientes.csv').catch(err => {
-        console.warn('No se pudo cargar clientes.csv', err);
-        return [];
-    });
-    const promGeocercas = cargarGeoJSON('data/geocercas_rutas.geojson').catch(err => {
-        console.warn('No se pudo cargar geocercas_rutas.geojson', err);
-        return { type: "FeatureCollection", features: [] };
-    });
-    const promDistribuidoras = cargarGeoJSON('data/geocercas_distribuidoras.geojson').catch(err => {
-        console.warn('No se pudo cargar geocercas_distribuidoras.geojson', err);
-        return { type: "FeatureCollection", features: [] };
-    });
+function cargarMapeoRutasDistribuidoras(url = 'data/rutas_distribuidoras.csv') {
+    return fetch(url)
+        .then(res => res.text())
+        .then(csvText => {
+            const lineas = csvText.split(/\r?\n/);
+            lineas.forEach(linea => {
+                const partes = linea.split(';');
+                if (partes.length >= 2) {
+                    const r = partes[0].trim();
+                    const d = partes[1].trim();
+                    if (r && d && r.toUpperCase() !== 'RUTA') {
+                        rawRutasDistribuidoras[r] = d;
+                    }
+                }
+            });
+        })
+        .catch(err => console.warn('No se pudo cargar rutas_distribuidoras.csv', err));
+}
 
-    return Promise.all([promClientes, promGeocercas, promDistribuidoras])
+function cargarDatosIniciales() {
+    const promClientes = cargarClientes('data/clientes.csv').catch(err => []);
+    const promGeocercas = cargarGeoJSON('data/geocercas_rutas.geojson').catch(err => ({ type: "FeatureCollection", features: [] }));
+    const promDistribuidoras = cargarGeoJSON('data/geocercas_distribuidoras.geojson').catch(err => ({ type: "FeatureCollection", features: [] }));
+    const promRutasDist = cargarMapeoRutasDistribuidoras('data/rutas_distribuidoras.csv');
+
+    return Promise.all([promClientes, promGeocercas, promDistribuidoras, promRutasDist])
         .then(([clientes, geocercas, distribuidoras]) => {
             rawClientes = clientes;
             rawGeocercas = geocercas || { type: "FeatureCollection", features: [] };
@@ -560,7 +565,6 @@ function procesarPropiedadesGeocercas() {
 function inicializarMapa() {
     if (map) { map.remove(); map = null; }
     
-    // Novedad 4: Capas Base de Mapa (OpenStreetMap, Google Road, Google Satellite)
     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
     const googleRoad = L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'], attribution: '© Google Maps' });
     const googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'], attribution: '© Google Satellite' });
@@ -809,7 +813,7 @@ function actualizarOpcionesRuta() {
 
 function aplicarFiltros() {
     if (rutaOptimaLayerGroup) rutaOptimaLayerGroup.clearLayers();
-    
+
     const grupoSel = document.getElementById('select-grupo').value;
     const rutaSel = document.getElementById('select-ruta').value;
 
@@ -854,7 +858,6 @@ function aplicarFiltros() {
     document.getElementById('kpi-total').innerText = clientesFiltrados.length;
     actualizarKPIsVisitas();
 
-    // Validar si el botón de Ruta Óptima debe habilitarse (Ruta específica + Día activo)
     const btnRutaOpt = document.getElementById('btn-trazar-ruta');
     if (rutaSel !== 'TODOS' && diaSeleccionado !== 'NINGUNO' && clientesFiltrados.length > 1) {
         btnRutaOpt.disabled = false;
@@ -872,7 +875,6 @@ function aplicarFiltros() {
     }
 }
 
-// Novedad 3: Filtrado en la tabla mediante el buscador de texto
 function filtrarTablaPorTexto() {
     const text = document.getElementById('input-search-cliente').value.toLowerCase().trim();
     if (!text) {
@@ -934,7 +936,6 @@ function actualizarKPIsVisitas() {
     document.getElementById('kpi-pendientes').innerText = pendientes;
     document.getElementById('kpi-porcentaje').innerText = porcentaje + '%';
 
-    // Novedad 1: Actualización de la Barra de Progreso
     const pBar = document.getElementById('progress-bar-fill');
     const pText = document.getElementById('progress-text');
     pBar.style.width = porcentaje + '%';
@@ -957,44 +958,70 @@ function seleccionarClienteEnMapa(codigo) {
 }
 
 // ============================================================
-//  NOVEDAD 5: ALGORITMO DE RUTA ÓPTIMA (Inicia en Lejano, Termina en Cercano)
+//  ALGORITMO DE RUTA ÓPTIMA CON DISTRIBUIDORA DE REFERENCIA
 // ============================================================
 function calcularDistancia(lat1, lon1, lat2, lon2) {
-    const R = 6371; // Radio de la Tierra en km
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-              Math.sin(dLon/2) * Math.sin(dLon/2);
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function obtenerCentroideDistribuidora(nombreDistribuidora) {
+    if (!rawDistribuidoras || !rawDistribuidoras.features) return null;
+    const feat = rawDistribuidoras.features.find(f => {
+        const props = f.properties || {};
+        const n = props.nambe || props.Name || props.name || props.DISTRIBUIDORA || '';
+        return n.toLowerCase().trim() === nombreDistribuidora.toLowerCase().trim();
+    });
+    if (!feat || !feat.geometry) return null;
+
+    let coords = [];
+    if (feat.geometry.type === 'Polygon') coords = feat.geometry.coordinates[0];
+    else if (feat.geometry.type === 'MultiPolygon') coords = feat.geometry.coordinates[0][0];
+
+    if (coords.length === 0) return null;
+    let sumLat = 0, sumLng = 0;
+    coords.forEach(pt => { sumLng += pt[0]; sumLat += pt[1]; });
+    return { lat: sumLat / coords.length, lng: sumLng / coords.length };
 }
 
 function trazarRutaOptima() {
     if (rutaOptimaLayerGroup) rutaOptimaLayerGroup.clearLayers();
 
+    const rutaSel = document.getElementById('select-ruta').value;
     const clientesValidos = ultimoClientesFiltrados.filter(c => c.lat && c.lng && !isNaN(c.lat) && !isNaN(c.lng));
+    
     if (clientesValidos.length < 2) {
         alert("⚠️ Se necesitan al menos 2 clientes con coordenadas para trazar la ruta.");
         return;
     }
 
-    // 1. Calcular el Centroide (Punto Central Promedio)
-    let sumLat = 0, sumLng = 0;
-    clientesValidos.forEach(c => { sumLat += c.lat; sumLng += c.lng; });
-    const centroide = { lat: sumLat / clientesValidos.length, lng: sumLng / clientesValidos.length };
+    const nombreDistribuidora = rawRutasDistribuidoras[rutaSel];
+    let puntoReferencia = null;
 
-    // 2. Encontrar el cliente MÁS LEJANO del centroide (Primer cliente del día)
+    if (nombreDistribuidora) {
+        puntoReferencia = obtenerCentroideDistribuidora(nombreDistribuidora);
+    }
+
+    if (!puntoReferencia) {
+        let sumLat = 0, sumLng = 0;
+        clientesValidos.forEach(c => { sumLat += c.lat; sumLng += c.lng; });
+        puntoReferencia = { lat: sumLat / clientesValidos.length, lng: sumLng / clientesValidos.length };
+    }
+
     let primerCliente = clientesValidos[0];
     let maxDist = -1;
     clientesValidos.forEach(c => {
-        const d = calcularDistancia(centroide.lat, centroide.lng, c.lat, c.lng);
+        const d = calcularDistancia(puntoReferencia.lat, puntoReferencia.lng, c.lat, c.lng);
         if (d > maxDist) {
             maxDist = d;
             primerCliente = c;
         }
     });
 
-    // 3. Algoritmo del Vecino Más Cercano partiendo del más lejano
     let noVisitados = [...clientesValidos];
     let secuencia = [];
     let actual = primerCliente;
@@ -1018,16 +1045,14 @@ function trazarRutaOptima() {
         noVisitados = noVisitados.filter(c => c.codigo !== actual.codigo);
     }
 
-    // 4. Dibujar la Ruta en el Mapa
     const latLngs = secuencia.map(c => [c.lat, c.lng]);
     const polyline = L.polyline(latLngs, {
         color: '#7c3aed',
         weight: 4,
         dashArray: '8, 8',
-        opacity: 0.8
+        opacity: 0.85
     }).addTo(rutaOptimaLayerGroup);
 
-    // Colocar marcadores con numeración de orden
     secuencia.forEach((c, index) => {
         const num = index + 1;
         const isFirst = num === 1;
@@ -1042,16 +1067,16 @@ function trazarRutaOptima() {
         });
 
         L.marker([c.lat, c.lng], { icon: customIcon })
-            .bindPopup(`<b>Parada #${num}</b><br>${c.nombre}<br><i>${isFirst ? 'INICIO (Cliente más distante)' : (isLast ? 'FIN (Cliente más cercano)' : '')}</i>`)
+            .bindPopup(`<b>Parada #${num}</b><br>${c.nombre}<br><i>${isFirst ? 'INICIO (Más distante a ' + (nombreDistribuidora || 'Distribuidora') + ')' : (isLast ? 'FIN (Más cercano a ' + (nombreDistribuidora || 'Distribuidora') + ')' : '')}</i>`)
             .addTo(rutaOptimaLayerGroup);
     });
 
     map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
-    alert(`✅ Ruta óptima trazada para ${secuencia.length} clientes.\nInicia en el cliente más lejano y finaliza en el más cercano.`);
+    alert(`✅ Ruta trazada tomando de referencia: ${nombreDistribuidora || 'Distribuidora Central'}.\nInicio: Cliente más distante (${secuencia[0].nombre})\nFin: Cliente más cercano (${secuencia[secuencia.length - 1].nombre})`);
 }
 
 // ============================================================
-//  NOVEDAD 2: MODAL COMPARATIVO
+//  MODAL COMPARATIVO
 // ============================================================
 function abrirModalComparativo() {
     const tbody = document.getElementById('tabla-comparativo-body');
@@ -1091,7 +1116,7 @@ function cerrarModalComparativo() {
 }
 
 // ============================================================
-//  FUNCIONES DE ADMIN & DESCARGAS (Originales Mantenidas)
+//  FUNCIONES DE ADMIN & DESCARGAS
 // ============================================================
 function subirNuevoCSV(file) {
     if (!file) return;
